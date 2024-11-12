@@ -4,6 +4,7 @@
  */
 
 import {defineConfig, devices} from '@playwright/test';
+import {getPortalURL} from './utils/getPortalURL';
 
 /**
  * Read environment variables from file.
@@ -48,9 +49,7 @@ export default defineConfig({
 
 	/* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
 	use: {
-		baseURL: process.env.PORTAL_URL
-			? process.env.PORTAL_URL
-			: 'http://localhost:8080',
+		baseURL: getPortalURL(),
 		screenshot: 'only-on-failure',
 		trace: 'retain-on-failure',
 	},

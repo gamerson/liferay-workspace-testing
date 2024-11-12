@@ -1,1 +1,10 @@
 apply plugin: "com.liferay.frontend.plugin"
+
+println node.nodeVersion
+println node.npmVersion
+
+def virtualInstance = "default"
+
+packageRunTestAllHeadless {
+    environment "LIFERAY_ROUTES_DXP", "${gradle.liferayWorkspace.homeDir}/routes/${virtualInstance}/dp"
+}
