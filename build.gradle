@@ -2,6 +2,7 @@ import com.liferay.gradle.util.OSDetector
 
 plugins {
 	id "com.avast.gradle.docker-compose" version "0.17.8"
+	id 'org.barfuin.gradle.taskinfo' version '2.2.0'
 }
 
 // Get executable file name based on OS
@@ -43,26 +44,31 @@ Provider<File> tomcatDirProvider = tomcatBinDirProvider.map {
 subprojects {
 	Project project ->
 
+	pluginManager.withPlugin('java') {
+		java {
+			toolchain {
+				languageVersion = JavaLanguageVersion.of(11)
+			}
+		}
+	}
+
 	pluginManager.withPlugin('com.liferay.test.integration') {
+		//These dependencies are deployed to the bundle
+		//These dependencies are needed by the test runner
+
 		dependencies {
-			/*
-			These dependencies are needed by the test runner
-			 */
 			testIntegrationImplementation group: "biz.aQute.bnd", name: "biz.aQute.bndlib", version: "3.5.0"
+			testIntegrationImplementation group: "com.liferay", name: "com.liferay.arquillian.extension.junit.bridge", version: "1.0.20"
 			testIntegrationImplementation group: "com.liferay", name: "org.apache.logging.log4j", version: "2.17.1.LIFERAY-PATCHED-1"
 			testIntegrationImplementation group: "com.liferay", name: "org.apache.logging.log4j.core", version: "2.17.1.LIFERAY-PATCHED-1"
-			testIntegrationImplementation group: "com.liferay.portal", name: "com.liferay.portal.test", version: "latest.release"
+			testIntegrationImplementation group: "com.liferay.portal", name: "com.liferay.portal.test", version: "24.5.1"
 			testIntegrationImplementation group: "junit", name: "junit", version: "4.13.1"
 			testIntegrationImplementation group: "org.slf4j", name: "log4j-over-slf4j", version: "1.7.25"
-			testIntegrationImplementation group: 'com.liferay', name: 'com.liferay.arquillian.extension.junit.bridge', version: 'latest.release'
 
-			/*
-			These dependencies are deployed to the bundle
-			 */
-			testModules group: "com.liferay", name: "com.liferay.arquillian.extension.junit.bridge.connector", version: 'latest.release'
-			testModules group: "com.liferay.portal", name: "com.liferay.portal.test", version: "latest.release"
-			testModules group: "com.liferay.portal", name: "com.liferay.portal.test.integration", version: "latest.release"
-			testModules group: "org.apache.aries.jmx", name: "org.apache.aries.jmx.core", version: "latest.release"
+			testModules group: "com.liferay", name: "com.liferay.arquillian.extension.junit.bridge.connector", version: "1.0.1"
+			testModules group: "com.liferay.portal", name: "com.liferay.portal.test", version: "24.5.1"
+			testModules group: "com.liferay.portal", name: "com.liferay.portal.test.integration", version: "6.0.36"
+			testModules group: "org.apache.aries.jmx", name: "org.apache.aries.jmx.core", version: "1.1.8"
 		}
 
 		/*
@@ -83,10 +89,13 @@ subprojects {
 	}
 }
 
-// Declare set up and tear down tasks for functional tests
+// Declare funcitonal testing lifecycle tasks
 
-tasks.register("setUpDependencies")
-tasks.register("tearDownDependencies")
+tasks.register("setUp")
+tasks.register("runFunctionalTests")
+tasks.register("tearDown")
+
+// Use playwright tasks for functional testing
 
 String functionalTestTaskName = "packageRunTestAllHeadless"
 
@@ -94,17 +103,35 @@ project(":playwright").afterEvaluate {
 	Project project ->
 
 	project.tasks.named("${functionalTestTaskName}") {
-		mustRunAfter ":setUpDependencies"
+		mustRunAfter ":setUp"
 	}
 }
 
-tasks.register("runFunctionalTests") {
-	dependsOn ":setUpDependencies"
+tasks.named("runFunctionalTests") {
+	dependsOn ":setUp"
 	dependsOn ":playwright:${functionalTestTaskName}"
 
-	finalizedBy ":tearDownDependencies"
+	finalizedBy ":tearDown"
 }
+
+// apply a profile that will add tasks to the lifecycle tasks above
 
 String setupProfile = findProperty("setupProfile") ?: "local"
 
 apply from: "set-up-tests-${setupProfile}.gradle"
+
+tasks.named("setUp") {
+	doLast {
+		println "setUp finished: ${setupProfile}"
+	}
+}
+tasks.named("runFunctionalTests") {
+	doFirst {
+		println "runFunctionalTests finished: ${setupProfile}"
+	}
+}
+tasks.named("tearDown") {
+	doFirst {
+		println "tearDown finished: ${setupProfile}"
+	}
+}

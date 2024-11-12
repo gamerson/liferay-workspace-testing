@@ -10,16 +10,44 @@ import org.zeroturnaround.process.PidProcess
 import org.zeroturnaround.process.ProcessUtil
 import org.zeroturnaround.process.Processes
 
-tasks.register("serverStart", ServerStartTask)
-tasks.register("serverStop", ServerStopTask)
+// Add task dependencies to the lifecycle tasks
+tasks.named("setUp") {
+	dependsOn "deployProjects"
+	dependsOn "serverStartLiferay"
+	dependsOn "startMicroservices"
+}
 
+tasks.named("tearDown") {
+	dependsOn "serverStopLiferay"
+	dependsOn "stopMicroservices"
+}
+
+// Define the tasks that are needed for setUp
+tasks.register("deployProjects") {
+	dependsOn ":client-extensions:liferay-sample-custom-element-1:deploy"
+	dependsOn ":client-extensions:liferay-sample-custom-element-2:deploy"
+	dependsOn ":client-extensions:liferay-sample-etc-node:deploy"
+	dependsOn ":client-extensions:liferay-sample-etc-spring-boot:deploy"
+}
+
+tasks.register("serverStartLiferay", ServerStartTask)
+tasks.register("serverStopLiferay", ServerStopTask)
+
+tasks.register("startMicroservices") {
+	dependsOn ":client-extensions:liferay-sample-etc-node:startMicroservice"
+	dependsOn ":client-extensions:liferay-sample-etc-spring-boot:startMicroservice"
+}
+
+tasks.register("stopMicroservices") {
+	dependsOn ":client-extensions:liferay-sample-etc-node:cleanStartMicroservice"
+	dependsOn ":client-extensions:liferay-sample-etc-spring-boot:cleanStartMicroservice"
+}
+
+// start microservices tasks
 project(":client-extensions:liferay-sample-etc-node") {
 	Project project ->
 
 	project.tasks.register('startMicroservice', ExecuteAndWaitForTask) {
-		dependsOn "deploy"
-		dependsOn ":serverStart"
-
 		doFirst new WaitForFileExistsAction(provider {"${gradle.liferayWorkspace.homeDir}/routes/default/${project.name}"})
 
 		execArgs.addAll rootProject.file("gradlew").path, "${project.path}:packageRunStart"
@@ -35,9 +63,6 @@ project(":client-extensions:liferay-sample-etc-spring-boot") {
 	Project project ->
 
 	project.tasks.register('startMicroservice', ExecuteAndWaitForTask) {
-		dependsOn "deploy"
-		dependsOn ":serverStart"
-
 		doFirst new WaitForFileExistsAction(provider {"${gradle.liferayWorkspace.homeDir}/routes/default/${project.name}"})
 
 		execArgs.addAll rootProject.file("gradlew").path, "${project.path}:bootRun"
@@ -53,8 +78,12 @@ subprojects {
 	Project project ->
 
 	afterEvaluate {
+		// make sure all microservices depend on both deployment and server start
 		tasks.withType(ExecuteAndWaitForTask) {
 			task ->
+
+			task.dependsOn ":deployProjects"
+			task.dependsOn ":serverStartLiferay"
 
 			String name = task.name
 
@@ -81,15 +110,18 @@ subprojects {
 	}
 }
 
-tasks.named("setUpDependencies") {
-	dependsOn ":client-extensions:liferay-sample-custom-element-1:deploy"
-	dependsOn ":client-extensions:liferay-sample-custom-element-2:deploy"
-	dependsOn ":client-extensions:liferay-sample-etc-node:startMicroservice"
-	dependsOn ":client-extensions:liferay-sample-etc-spring-boot:startMicroservice"
+tasks.named("deployProjects") {
+	doLast {
+		println "deployProjects finished"
+	}
 }
-
-tasks.named("tearDownDependencies") {
-	dependsOn ":client-extensions:liferay-sample-etc-node:cleanStartMicroservice"
-	dependsOn ":client-extensions:liferay-sample-etc-spring-boot:cleanStartMicroservice"
-	dependsOn ":serverStop"
+tasks.named("serverStartLiferay") {
+	doLast {
+		println "serverStartLiferay finished"
+	}
+}
+tasks.named("startMicroservices") {
+	doLast {
+		println "startMicroservices finished"
+	}
 }

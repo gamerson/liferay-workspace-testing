@@ -6,14 +6,29 @@ import com.liferay.workspace.testing.WaitForHealthyAction
 
 import java.time.Duration
 
+// add task depends to the lifecycle tasks
+tasks.named("setUp") {
+	// startDockerContainer is a task from liferay workspace plugin
+	// it implicitly includes the deploy tasks for all modules and client extensions
+	dependsOn ":startDockerContainer"
+	dependsOn ":client-extensions:liferay-sample-etc-spring-boot:startDockerContainer"
+	dependsOn ":client-extensions:liferay-sample-etc-node:startDockerContainer"
+}
+
+tasks.named("tearDown") {
+	dependsOn ":stopDockerContainer"
+	dependsOn ":client-extensions:liferay-sample-etc-node:stopDockerContainer"
+	dependsOn ":client-extensions:liferay-sample-etc-spring-boot:stopDockerContainer"
+}
+
 String liferayRoutesDir = "/opt/liferay/routes"
 String microserviceRoutesDir = "/etc/liferay/routes"
 
 Duration interval = Duration.ofSeconds(5)
-Duration timeout = Duration.ofMinutes(5)
+Duration timeout = Duration.ofMinutes(10)
 
 createDockerContainer {
-	healthCheck.cmd "curl localhost:8080 && ls ${liferayRoutesDir}/default/liferay-sample-etc-node && ls ${liferayRoutesDir}/default/liferay-sample-etc-spring-boot"
+	healthCheck.cmd "/opt/liferay/health-check.sh"
 	healthCheck.interval.set interval.toNanos()
 	healthCheck.startPeriod.set Duration.ofMinutes(2).toNanos()
 	healthCheck.timeout.set timeout.toNanos()
@@ -35,8 +50,7 @@ startDockerContainer {
 		TaskProvider<DockerCreateContainer> dockerCreateContainerTaskProvider = project.tasks.register("createDockerContainer", DockerCreateContainer) {
 			dependsOn "buildDockerImage"
 
-			containerId.set "${project.name}-container-id"
-			containerName.set "${project.name}-docker-container-name"
+			containerName.set "${project.name}-container"
 
 			hostConfig.binds.put "routes", microserviceRoutesDir
 			hostConfig.network.set "host"
@@ -79,15 +93,4 @@ project(":client-extensions:liferay-sample-etc-spring-boot").afterEvaluate {
 	project.tasks.named("createDockerContainer", DockerCreateContainer) {
 		healthCheck.cmd "curl localhost:58081"
 	}
-}
-
-tasks.named("setUpDependencies") {
-	dependsOn ":client-extensions:liferay-sample-etc-spring-boot:startDockerContainer"
-	dependsOn ":client-extensions:liferay-sample-etc-node:startDockerContainer"
-}
-
-tasks.named("tearDownDependencies") {
-	dependsOn ":client-extensions:liferay-sample-etc-node:stopDockerContainer"
-	dependsOn ":client-extensions:liferay-sample-etc-spring-boot:stopDockerContainer"
-	dependsOn ":stopDockerContainer"
 }
