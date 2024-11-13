@@ -1,20 +1,21 @@
 {
-	"author": "",
-	"description": "",
-	"devDependencies": {
-		"@playwright/test": "^1.44.0",
-		"@types/node": "^20.12.12"
-	},
-	"keywords": [
-	],
-	"license": "ISC",
-	"main": "index.js",
-	"name": "playwright",
-	"scripts": {
-		"testAll": "playwright install && playwright test --headed --retries 3",
-		"testAllHeadless": "playwright install --with-deps && playwright test --retries 3",
-		"testCustomElement1": "playwright install && playwright test sample-custom-element-1.spec.ts --headed",
-		"testCustomElement2": "playwright install && playwright test sample-custom-element-2.spec.ts --headed"
-	},
-	"version": "1.0.0"
+  "author": "",
+  "description": "",
+  "devDependencies": {
+    "@playwright/test": "^1.44.0",
+    "@types/node": "^20.12.12"
+  },
+  "keywords": [],
+  "license": "ISC",
+  "main": "index.js",
+  "name": "playwright",
+  "scripts": {
+    "playwrightInstallWithDeps": "playwright install --with-deps",
+    "testAll": "playwright install && playwright test --headed --retries 3",
+    "testAllHeadless": "playwright install --with-deps && playwright test --retries 3",
+    "testAllDocker": "playwright test --retries 3",
+    "testCustomElement1": "playwright install && playwright test sample-custom-element-1.spec.ts --headed",
+    "testCustomElement2": "playwright install && playwright test sample-custom-element-2.spec.ts --headed"
+  },
+  "version": "1.0.0"
 }
